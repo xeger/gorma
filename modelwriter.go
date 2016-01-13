@@ -52,7 +52,7 @@ func NewModelData(version string, utd *design.UserTypeDefinition) ModelData {
 		TypeDef:          utd,
 		RequiredPackages: make(map[string]bool, 0),
 	}
-	tn := deModel(codegen.GoTypeName(utd, 0))
+	tn := deModel(codegen.GoTypeName(utd, utd.AllRequired(), 0))
 	//	def := utd.Definition()
 	md.TypeName = tn
 	md.ModelUpper = upper(tn)

@@ -34,6 +34,7 @@ func versionize(s string) string {
 	return upper(s)
 
 }
+
 func modelMetadata(ad *design.AttributeDefinition) bool {
 	needle := strings.ToLower(META_NAMESPACE)
 	for k, v := range ad.Metadata {
@@ -46,6 +47,16 @@ func modelMetadata(ad *design.AttributeDefinition) bool {
 		}
 	}
 	return false
+}
+func referenceType(action *design.ActionDefinition) design.DataType {
+	if action.Payload != nil {
+		a := action.Payload.Definition()
+		if a.Reference != nil {
+			return a.Reference
+		}
+	}
+	return nil
+
 }
 func hasUserType(action *design.ActionDefinition) bool {
 	if action.Payload != nil {
@@ -349,6 +360,50 @@ func ModelDef(res *design.UserTypeDefinition) string {
 type PrimaryKey struct {
 	Field string
 	Type  string
+}
+type PayloadField struct {
+	Name    string
+	Type    string
+	Pointer bool
+}
+
+func attributeFields(att *design.AttributeDefinition) []PayloadField {
+	var columns []PayloadField
+	if o := att.Type.ToObject(); o != nil {
+		o.IterateAttributes(func(n string, catt *design.AttributeDefinition) error {
+			f := PayloadField{
+				Name:    n,
+				Type:    codegen.GoNativeType(catt.Type),
+				Pointer: catt.Type.IsObject() || att.IsPrimitivePointer(n),
+			}
+			columns = append(columns, f)
+			return nil
+		})
+	}
+
+	return columns
+}
+
+func getTypeFields(res *design.UserTypeDefinition) []PayloadField {
+	fields := make([]PayloadField, 0)
+	def := res.Definition()
+	t := def.Type
+	switch actual := t.(type) {
+	case design.Object:
+		for n := range actual {
+			field := actual[n]
+			f := PayloadField{
+				Name:    n,
+				Type:    codegen.GoTypeName(actual[n].Type, res.AllRequired(), 0),
+				Pointer: field.Type.IsObject() || def.IsPrimitivePointer(n),
+			}
+			fields = append(fields, f)
+		}
+
+	default:
+		panic("gorma bug: expected data structure type")
+	}
+	return fields
 }
 
 func getPrimaryKeys(res *design.UserTypeDefinition) map[string]PrimaryKey {

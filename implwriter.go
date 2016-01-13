@@ -37,7 +37,7 @@ func NewImplData(version string, utd *design.UserTypeDefinition) ImplData {
 		TypeDef:          utd,
 		RequiredPackages: make(map[string]bool, 0),
 	}
-	tn := deModel(codegen.GoTypeName(utd, 0))
+	tn := deModel(codegen.GoTypeName(utd, utd.AllRequired(), 0))
 	md.TypeName = tn
 	md.ModelUpper = upper(tn)
 	md.ModelLower = lower(tn)

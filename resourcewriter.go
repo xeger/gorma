@@ -31,6 +31,7 @@ func NewResourceData(version string, utd *design.ResourceDefinition) ResourceDat
 		TypeDef:          utd,
 		RequiredPackages: make(map[string]bool, 0),
 	}
+
 	md.TypeName = codegen.Goify(utd.Name, true)
 	md.MediaUpper = upper(utd.Name)
 	md.MediaLower = lower(utd.Name)
@@ -89,6 +90,9 @@ func NewResourceWriter(filename string) (*ResourceWriter, error) {
 	funcMap["columns"] = GetAttributeColumns
 	funcMap["version"] = versionize
 	funcMap["hasusertype"] = hasUserType
+	funcMap["typefields"] = getTypeFields
+	funcMap["attributefields"] = attributeFields
+	funcMap["referencetype"] = referenceType
 
 	modelTmpl, err := template.New("media").Funcs(funcMap).Parse(resourceTmpl)
 	if err != nil {
