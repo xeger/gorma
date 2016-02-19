@@ -5,90 +5,19 @@ import (
 	. "github.com/goadesign/goa/design/apidsl"
 )
 
-var _ = Resource("ui", func() {
-	BasePath("/")
-	Action("bootstrap", func() {
-		Routing(
-			GET("//"),
-		)
-		Description("Render single page app HTML")
-		Response(OK, func() {
-			Media("text/html")
-		})
-	})
-})
+var _ = Resource("account", func() {
 
-var _ = Resource("auth", func() {
-	DefaultMedia(Authorize)
-	BasePath("/auth")
-	Action("token", func() {
-		Routing(
-			POST("/token"),
-		)
-		Description("Obtain an access token")
-		Payload(Login)
-		Response(Created, func() {
-			Media(Authorize)
-		})
-	})
-	Action("refresh", func() {
-		Routing(
-			POST("/refresh"),
-		)
-		Description("Obtain a refreshed access token")
-		Payload(Login)
-		Response(Created, func() {
-			Media(Authorize)
-		})
-	})
-	Action("callback", func() {
-		Routing(
-			GET("/:provider/callback"),
-		)
-		Description("OAUTH2 callback endpoint")
-		Params(func() {
-			Param("provider", String)
-		})
-		Response(OK, func() {
-			Media("text/html")
-		})
-	})
-	Action("oauth", func() {
-		Routing(
-			GET("/:provider"),
-		)
-		Description("OAUTH2 login endpoint")
-		Params(func() {
-			Param("provider", String)
-		})
-		Response(OK)
-	})
-})
-var _ = Resource("user", func() {
-
-	DefaultMedia(User)
-	BasePath("/users")
-	Action("list", func() {
-		Routing(
-			GET(""),
-		)
-		Description("List all users in account")
-		Response(OK, func() {
-			Media(CollectionOf(User, func() {
-				View("default")
-			}))
-		})
-	})
+	DefaultMedia(Account)
+	BasePath("/accounts")
 
 	Action("show", func() {
 		Routing(
-			GET("/:userID"),
+			GET("/:accountID"),
 		)
-		Description("Retrieve user with given id")
+		Description("Retrieve account with given id")
 		Params(func() {
-			Param("userID", Integer)
+			Param("accountID", Integer, "Account ID")
 		})
-		Metadata("action", "123")
 		Response(OK)
 		Response(NotFound)
 	})
@@ -97,64 +26,72 @@ var _ = Resource("user", func() {
 		Routing(
 			POST(""),
 		)
-		Description("Record new user")
-		Payload(UserPayload, func() {
-			Required("firstname")
-			Required("lastname")
-			Required("email")
+		Description("Create new account")
+		Payload(func() {
+			Member("name")
+			Required("name")
 		})
-		Response(Created, "^/accounts/[0-9]+/users/[0-9]+$")
+		Response(Created, "/accounts/[0-9]+")
 	})
 
 	Action("update", func() {
 		Routing(
-			PATCH("/:userID"),
+			PUT("/:accountID"),
 		)
+		Description("Change account name")
 		Params(func() {
-			Param("userID", Integer)
+			Param("accountID", Integer, "Account ID")
 		})
-		Payload(UserPayload, func() {
-			Required("email")
+		Payload(func() {
+			Member("name")
+			Required("name")
 		})
 		Response(NoContent)
 		Response(NotFound)
 	})
+
 	Action("delete", func() {
 		Routing(
-			DELETE("/:userID"),
+			DELETE("/:accountID"),
 		)
 		Params(func() {
-			Param("userID", Integer, "User ID")
+			Param("accountID", Integer, "Account ID")
 		})
 		Response(NoContent)
 		Response(NotFound)
 	})
 })
 
-var _ = Resource("proposal", func() {
+var _ = Resource("bottle", func() {
 
-	Parent("user")
-	DefaultMedia(Proposal)
-	BasePath("/proposals")
+	DefaultMedia(Bottle)
+	BasePath("bottles")
+	Parent("account")
+
 	Action("list", func() {
 		Routing(
 			GET(""),
 		)
-		Description("List all proposals for a user")
+		Description("List all bottles in account optionally filtering by year")
+		Params(func() {
+			Param("years", ArrayOf(Integer), "Filter by years")
+		})
 		Response(OK, func() {
-			Media(CollectionOf(Proposal, func() {
+			Media(CollectionOf(Bottle, func() {
 				View("default")
+				View("tiny")
 			}))
 		})
+		Response(NotFound)
 	})
 
 	Action("show", func() {
 		Routing(
-			GET("/:proposalID"),
+			GET("/:bottleID"),
 		)
-		Description("Retrieve proposal with given id")
+		Description("Retrieve bottle with given id")
 		Params(func() {
-			Param("proposalID", Integer)
+			Param("bottleID", Integer)
 		})
 		Response(OK)
 		Response(NotFound)
@@ -164,94 +101,46 @@ var _ = Resource("proposal", func() {
 		Routing(
 			POST(""),
 		)
-		Description("Create a new proposal")
-		Payload(ProposalPayload, func() {
-			Required("title")
-			Required("abstract")
-			Required("detail")
+		Description("Record new bottle")
+		Payload(BottlePayload, func() {
+			Required("name", "vineyard", "varietal", "vintage", "color")
 		})
-		Response(Created, "^/users/[0-9]+/proposals/[0-9]+$")
+		Response(Created, "^/accounts/[0-9]+/bottles/[0-9]+$")
 	})
 
 	Action("update", func() {
 		Routing(
-			PATCH("/:proposalID"),
+			PATCH("/:bottleID"),
 		)
 		Params(func() {
-			Param("proposalID", Integer)
+			Param("bottleID", Integer)
 		})
-		Payload(ProposalPayload)
+		Payload(BottlePayload)
 		Response(NoContent)
 		Response(NotFound)
 	})
-	Action("delete", func() {
+
+	Action("rate", func() {
 		Routing(
-			DELETE("/:proposalID"),
+			PUT("/:bottleID/actions/rate"),
 		)
 		Params(func() {
-			Param("proposalID", Integer, "Proposal ID")
+			Param("bottleID", Integer)
 		})
-		Response(NoContent)
-		Response(NotFound)
-	})
-})
-
-var _ = Resource("review", func() {
-	Parent("proposal")
-	DefaultMedia(Review)
-	BasePath("/review")
-	Action("list", func() {
-		Routing(
-			GET(""),
-		)
-		Description("List all reviews for a proposal")
-		Response(OK, func() {
-			Media(CollectionOf(Review, func() {
-				View("default")
-			}))
-		})
-	})
-
-	Action("show", func() {
-		Routing(
-			GET("/:reviewID"),
-		)
-		Description("Retrieve review with given id")
-		Params(func() {
-			Param("reviewID", Integer)
-		})
-		Response(OK)
-		Response(NotFound)
-	})
-
-	Action("create", func() {
-		Routing(
-			POST(""),
-		)
-		Description("Create a new review")
-		Payload(ReviewPayload, func() {
+		Payload(func() {
+			Member("rating")
 			Required("rating")
 		})
-		Response(Created, "^/users/[0-9]+/proposals/[0-9]+/reviews/[0-9]+$")
-	})
-
-	Action("update", func() {
-		Routing(
-			PATCH("/:reviewID"),
-		)
-		Params(func() {
-			Param("reviewID", Integer)
-		})
-		Payload(ReviewPayload)
 		Response(NoContent)
 		Response(NotFound)
 	})
+
 	Action("delete", func() {
 		Routing(
-			DELETE("/:reviewID"),
+			DELETE("/:bottleID"),
 		)
 		Params(func() {
-			Param("reviewID", Integer, "Review ID")
+			Param("bottleID", Integer)
 		})
 		Response(NoContent)
 		Response(NotFound)
